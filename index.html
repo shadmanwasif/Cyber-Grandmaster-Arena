@@ -2,283 +2,518 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cyber Grandmaster Arena</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0a12; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #fff; }
-        #gameContainer { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        canvas { display: block; background: #0f1020; box-shadow: inset 0 0 50px rgba(0,255,255,0.1); }
-        #ui { position: absolute; top: 15px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; font-size: 16px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,255,0.7); z-index: 10; }
-        #credit { position: absolute; bottom: 10px; width: 100%; text-align: center; font-size: 12px; color: #8892b0; pointer-events: none; z-index: 10; padding: 0 10px; }
-        #joystickZone { position: absolute; bottom: 35px; left: 35px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2px solid rgba(0,255,255,0.2); touch-action: none; z-index: 10; display: flex; align-items: center; justify-content: center; }
-        #joystickKnob { width: 50px; height: 50px; border-radius: 50%; background: rgba(0,255,255,0.5); box-shadow: 0 0 15px rgba(0,255,255,0.8); position: absolute; pointer-events: none; }
-        #gameOverScreen { position: absolute; inset: 0; background: rgba(10,10,18,0.92); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; text-align: center; padding: 20px; }
-        #gameOverScreen h1 { font-size: 32px; color: #ff3366; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255,51,102,0.8); }
-        #restartBtn { margin-top: 20px; padding: 12px 30px; background: #00ffff; color: #0a0a12; border: none; font-size: 16px; font-weight: bold; border-radius: 25px; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,255,0.6); }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            touch-action: none;
+            overflow: hidden;
+            user-select: none;
+        }
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+        .btn-neon {
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+            transition: all 0.1s ease;
+        }
+        .btn-neon:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 5px rgba(6, 182, 212, 0.8);
+        }
     </style>
 </head>
-<body>
-    <div id="gameContainer">
-        <div id="ui">
-            <div id="scoreDisplay">Score: 0</div>
-            <div id="livesDisplay">Shields: 10/10</div>
+<body class="flex flex-col h-screen w-full justify-between items-center select-none">
+
+    <header class="w-full max-w-md p-4 flex justify-between items-center z-10 bg-slate-900/80 backdrop-blur-md border-b border-cyan-500/20 rounded-b-2xl">
+        <div class="flex flex-col">
+            <span class="text-xs text-cyan-400 font-semibold tracking-wider uppercase">Score</span>
+            <span id="scoreDisplay" class="text-2xl font-extrabold text-white">0</span>
         </div>
-        <canvas id="gameCanvas"></canvas>
-        <div id="joystickZone">
-            <div id="joystickKnob"></div>
+        <div class="text-center">
+            <h1 class="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500 neon-glow">GRANDMASTER ARENA</h1>
+            <span class="text-[10px] text-slate-400">By Shadman Wasif Faruque</span>
         </div>
-        <div id="credit">Cyber Grandmaster Arena | Created by Shadman Wasif Faruque (Chess Player, Web Developer & Content Creator)</div>
-        <div id="gameOverScreen">
-            <h1>GAME OVER</h1>
-            <p id="finalScore">Your Score: 0</p>
-            <button id="restartBtn">Play Again</button>
+        <div class="flex flex-col items-end">
+            <span class="text-xs text-pink-400 font-semibold tracking-wider uppercase">Shields / Lives</span>
+            <span id="healthDisplay" class="text-2xl font-extrabold text-white">10 / 10</span>
         </div>
-    </div>
+    </header>
+
+    <main class="relative flex-1 w-full max-w-md flex justify-center items-center overflow-hidden">
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full bg-slate-950"></canvas>
+        
+        <!-- Start / Game Over Overlay with Creator Info -->
+        <div id="menuOverlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col justify-center items-center p-6 text-center z-20 overflow-y-auto">
+            <div class="w-16 h-16 mb-3 rounded-full bg-gradient-to-tr from-cyan-500 to-pink-500 flex items-center justify-center shadow-lg shadow-cyan-500/50 animate-pulse">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                </svg>
+            </div>
+            <h2 id="menuTitle" class="text-2xl font-black text-white mb-1 tracking-wide">CYBER GRANDMASTER</h2>
+            <div class="bg-cyan-950/40 border border-cyan-500/30 rounded-xl p-2.5 mb-4 w-full max-w-xs text-left">
+                <p class="text-xs text-cyan-300 font-bold mb-0.5">Creator & Developer:</p>
+                <p class="text-sm text-white font-extrabold">Shadman Wasif Faruque</p>
+                <p class="text-[11px] text-slate-300 mt-1 leading-tight">Young Chess Player, Web Developer & Content Creator. Navigate the cyber board with nimble precision!</p>
+            </div>
+            <p id="menuSubtitle" class="text-xs text-slate-400 mb-6 max-w-xs">Enemies are balanced and slower than your speed! You have 10 lives (hits) before game over. Use the 360° omni-joystick to dodge and collect nodes.</p>
+            <button id="startBtn" class="btn-neon w-full max-w-xs py-3.5 rounded-xl font-bold text-base text-white uppercase tracking-wider">
+                Launch Mission
+            </button>
+        </div>
+
+        <!-- Custom Message Box -->
+        <div id="msgBox" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900 border border-cyan-500/50 p-6 rounded-2xl shadow-2xl text-center z-30 max-w-xs w-full">
+            <p id="msgText" class="text-lg font-semibold text-white mb-4"></p>
+            <button id="msgClose" class="btn-neon w-full py-3 rounded-xl font-bold text-white uppercase text-sm">OK</button>
+        </div>
+    </main>
+
+    <footer class="w-full max-w-md p-3 flex justify-center items-center z-10 bg-slate-900/80 backdrop-blur-md border-t border-cyan-500/20 rounded-t-2xl">
+        <div id="joystickZone" class="relative w-32 h-28 flex items-center justify-center select-none touch-none">
+            <!-- Joystick Base -->
+            <div id="joystickBase" class="absolute w-20 h-20 rounded-full bg-slate-800/80 border-2 border-cyan-500/40 shadow-inner flex items-center justify-center">
+                <!-- Joystick Knob -->
+                <div id="joystickKnob" class="absolute w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 shadow-lg shadow-cyan-500/50 transition-transform duration-75"></div>
+            </div>
+        </div>
+    </footer>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const scoreDisplay = document.getElementById('scoreDisplay');
-        const livesDisplay = document.getElementById('livesDisplay');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const finalScore = document.getElementById('finalScore');
-        const restartBtn = document.getElementById('restartBtn');
+        const healthDisplay = document.getElementById('healthDisplay');
+        const menuOverlay = document.getElementById('menuOverlay');
+        const menuTitle = document.getElementById('menuTitle');
+        const menuSubtitle = document.getElementById('menuSubtitle');
+        const startBtn = document.getElementById('startBtn');
+        const msgBox = document.getElementById('msgBox');
+        const msgText = document.getElementById('msgText');
+        const msgClose = document.getElementById('msgClose');
+
         const joystickZone = document.getElementById('joystickZone');
+        const joystickBase = document.getElementById('joystickBase');
         const joystickKnob = document.getElementById('joystickKnob');
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
         }
-        window.addEventListener('resize', resize);
-        resize();
 
+        function playSound(type) {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+
+                if (type === 'collect') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'hit') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'gameover') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let width, height;
+        function resizeCanvas() {
+            width = canvas.parentElement.clientWidth;
+            height = canvas.parentElement.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
         let score = 0;
-        let lives = 10;
-        let isGameOver = false;
+        let lives = 10; // Exactly 10 hits allowed
 
-        const player = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            radius: 10,
-            speed: 4.5,
-            color: '#00ffff'
+        let player = {
+            x: width / 2,
+            y: height / 2,
+            radius: 12,
+            vx: 0,
+            vy: 0,
+            speed: 6.2 // Player speed
         };
 
+        let cores = [];
         let enemies = [];
-        let collectibles = [];
+        let particles = [];
+        let spawnTimer = 0;
 
-        // Joystick state
-        let joystickActive = false;
-        let joystickCenter = { x: 0, y: 0 };
-        let joystickVector = { x: 0, y: 0 };
+        // Joystick 360-degree state
+        let joystick = {
+            active: false,
+            identifier: null,
+            startX: 0,
+            startY: 0,
+            angle: 0,
+            power: 0
+        };
+
+        // Keyboard inputs support
+        let keys = { up: false, down: false, left: false, right: false };
+
+        function setupInputs() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = true;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = true;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'ArrowUp' || e.key === 'w') keys.up = false;
+                if (e.key === 'ArrowDown' || e.key === 's') keys.down = false;
+                if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+                if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+            });
+
+            const maxRadius = 32;
+
+            const handleStart = (clientX, clientY, identifier = null) => {
+                if (joystick.active) return;
+                joystick.active = true;
+                joystick.identifier = identifier;
+                const rect = joystickZone.getBoundingClientRect();
+                joystick.startX = rect.left + rect.width / 2;
+                joystick.startY = rect.top + rect.height / 2;
+                handleMove(clientX, clientY);
+            };
+
+            const handleMove = (clientX, clientY) => {
+                if (!joystick.active) return;
+                const dx = clientX - joystick.startX;
+                const dy = clientY - joystick.startY;
+                const distance = Math.hypot(dx, dy);
+                joystick.angle = Math.atan2(dy, dx);
+
+                let limitedDist = Math.min(distance, maxRadius);
+                joystick.power = limitedDist / maxRadius;
+
+                const knobX = Math.cos(joystick.angle) * limitedDist;
+                const knobY = Math.sin(joystick.angle) * limitedDist;
+
+                joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+            };
+
+            const handleEnd = () => {
+                joystick.active = false;
+                joystick.identifier = null;
+                joystick.power = 0;
+                joystickKnob.style.transform = `translate(0px, 0px)`;
+            };
+
+            joystickZone.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                handleStart(touch.clientX, touch.clientY, touch.identifier);
+            }, { passive: false });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!joystick.active) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === joystick.identifier) {
+                        e.preventDefault();
+                        handleMove(touch.clientX, touch.clientY);
+                    }
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchend', (e) => {
+                if (!joystick.active) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === joystick.identifier) {
+                        handleEnd();
+                    }
+                }
+            });
+
+            joystickZone.addEventListener('mousedown', (e) => {
+                handleStart(e.clientX, e.clientY);
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (joystick.active) handleMove(e.clientX, e.clientY);
+            });
+            window.addEventListener('mouseup', () => {
+                if (joystick.active) handleEnd();
+            });
+        }
+        setupInputs();
+
+        function initGame() {
+            score = 0;
+            lives = 10;
+            scoreDisplay.textContent = score;
+            healthDisplay.textContent = lives + ' / 10';
+            player.x = width / 2;
+            player.y = height / 2;
+            player.vx = 0;
+            player.vy = 0;
+
+            cores = [];
+            enemies = [];
+            particles = [];
+
+            for (let i = 0; i < 5; i++) {
+                spawnCore();
+            }
+        }
+
+        function spawnCore() {
+            cores.push({
+                x: Math.random() * (width - 40) + 20,
+                y: Math.random() * (height - 40) + 20,
+                radius: 8
+            });
+        }
 
         function spawnEnemy() {
-            if (isGameOver) return;
-            const radius = 15;
-            let x, y;
-            if (Math.random() < 0.5) {
-                x = Math.random() < 0.5 ? -radius : canvas.width + radius;
-                y = Math.random() * canvas.height;
+            let ex, ey;
+            if (Math.random() > 0.5) {
+                ex = Math.random() > 0.5 ? -25 : width + 25;
+                ey = Math.random() * height;
             } else {
-                x = Math.random() * canvas.width;
-                y = Math.random() < 0.5 ? -radius : canvas.height + radius;
+                ex = Math.random() * width;
+                ey = Math.random() > 0.5 ? -25 : height + 25;
             }
+
             enemies.push({
-                x: x,
-                y: y,
-                radius: radius,
-                speed: 1.8, // Slower than player speed for easy dodging
-                color: '#ff3366'
+                x: ex,
+                y: ey,
+                radius: 14, // Clearly visible enemy size
+                speed: Math.random() * 0.5 + 0.8 // Noticeably slower than player speed (6.2)
             });
         }
 
-        function spawnCollectible() {
-            if (isGameOver) return;
-            collectibles.push({
-                x: Math.random() * (canvas.width - 60) + 30,
-                y: Math.random() * (canvas.height - 60) + 30,
-                radius: 8,
-                color: '#ffff00'
-            });
+        function addParticles(x, y, color) {
+            for (let i = 0; i < 6; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 4,
+                    vy: (Math.random() - 0.5) * 4,
+                    radius: Math.random() * 2.5 + 1,
+                    color: color,
+                    alpha: 1,
+                    decay: Math.random() * 0.05 + 0.02
+                });
+            }
         }
-
-        setInterval(spawnEnemy, 2000);
-        setInterval(spawnCollectible, 4000);
-
-        // Initial spawn
-        for(let i=0; i<3; i++) spawnEnemy();
-        for(let i=0; i<3; i++) spawnCollectible();
-
-        // Joystick Handlers (Touch & Mouse)
-        function handleJoystickStart(clientX, clientY) {
-            const rect = joystickZone.getBoundingClientRect();
-            joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-            joystickActive = true;
-            updateJoystick(clientX, clientY);
-        }
-
-        function handleJoystickMove(clientX, clientY) {
-            if (!joystickActive) return;
-            updateJoystick(clientX, clientY);
-        }
-
-        function handleJoystickEnd() {
-            joystickActive = false;
-            joystickVector = { x: 0, y: 0 };
-            joystickKnob.style.transform = `translate(0px, 0px)`;
-        }
-
-        function updateJoystick(clientX, clientY) {
-            const dx = clientX - joystickCenter.x;
-            const dy = clientY - joystickCenter.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const maxDist = 45;
-
-            let angle = Math.atan2(dy, dx);
-            let dist = Math.min(distance, maxDist);
-
-            joystickVector.x = Math.cos(angle) * (dist / maxDist);
-            joystickVector.y = Math.sin(angle) * (dist / maxDist);
-
-            joystickKnob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
-        }
-
-        joystickZone.addEventListener('touchstart', e => handleJoystickStart(e.touches[0].clientX, e.touches[0].clientY));
-        window.addEventListener('touchmove', e => {
-            if (joystickActive && e.touches.length > 0) handleJoystickMove(e.touches[0].clientX, e.touches[0].clientY);
-        });
-        window.addEventListener('touchend', () => { if (joystickActive) handleJoystickEnd(); });
-
-        joystickZone.addEventListener('mousedown', e => handleJoystickStart(e.clientX, e.clientY));
-        window.addEventListener('mousemove', e => { if (joystickActive) handleJoystickMove(e.clientX, e.clientY); });
-        window.addEventListener('mouseup', () => { if (joystickActive) handleJoystickEnd(); });
 
         let hitCooldown = 0;
 
         function update() {
-            if (isGameOver) return;
-
-            // Move player
-            player.x += joystickVector.x * player.speed;
-            player.y += joystickVector.y * player.speed;
-
-            // Boundaries
-            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+            if (gameState !== 'PLAYING') return;
 
             if (hitCooldown > 0) hitCooldown--;
 
-            // Move enemies towards player
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i];
-                let angle = Math.atan2(player.y - en.y, player.x - en.x);
-                en.x += Math.cos(angle) * en.speed;
-                en.y += Math.sin(angle) * en.speed;
+            let targetVx = 0;
+            let targetVy = 0;
 
-                // Collision with player
-                let dist = Math.hypot(player.x - en.x, player.y - en.y);
+            if (joystick.active) {
+                targetVx = Math.cos(joystick.angle) * player.speed * joystick.power;
+                targetVy = Math.sin(joystick.angle) * player.speed * joystick.power;
+            } else {
+                let kx = 0, ky = 0;
+                if (keys.left) kx -= 1;
+                if (keys.right) kx += 1;
+                if (keys.up) ky -= 1;
+                if (keys.down) ky += 1;
+                if (kx !== 0 || ky !== 0) {
+                    const len = Math.hypot(kx, ky);
+                    targetVx = (kx / len) * player.speed;
+                    targetVy = (ky / len) * player.speed;
+                }
+            }
+
+            player.vx = targetVx;
+            player.vy = targetVy;
+
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.x = Math.max(player.radius, Math.min(width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(height - player.radius, player.y));
+
+            spawnTimer++;
+            if (spawnTimer > 60) {
+                spawnTimer = 0;
+                spawnEnemy();
+                if (enemies.length > 12) enemies.shift();
+            }
+
+            enemies.forEach(en => {
+                const dx = player.x - en.x;
+                const dy = player.y - en.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 1) {
+                    en.x += (dx / dist) * en.speed;
+                    en.y += (dy / dist) * en.speed;
+                }
+
                 if (dist < player.radius + en.radius && hitCooldown === 0) {
-                    lives--;
-                    hitCooldown = 45; // Invulnerability frames
-                    livesDisplay.innerText = `Shields: ${lives}/10`;
+                    lives -= 1; // 1 life lost per hit
+                    hitCooldown = 40; // brief invulnerability frames
+                    playSound('hit');
+                    addParticles(player.x, player.y, '#ec4899');
+                    en.x -= (dx / dist) * 30;
+                    en.y -= (dy / dist) * 30;
+                    healthDisplay.textContent = Math.max(0, lives) + ' / 10';
                     if (lives <= 0) {
-                        triggerGameOver();
+                        gameOver();
                     }
                 }
-            }
-
-            // Collectibles collision
-            for (let i = collectibles.length - 1; i >= 0; i--) {
-                let col = collectibles[i];
-                let dist = Math.hypot(player.x - col.x, player.y - col.y);
-                if (dist < player.radius + col.radius) {
-                    score += 100;
-                    scoreDisplay.innerText = `Score: ${score}`;
-                    collectibles.splice(i, 1);
-                }
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw grid lines
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.03)';
-            ctx.lineWidth = 1;
-            const gridSize = 40;
-            for (let x = 0; x < canvas.width; x += gridSize) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-            }
-            for (let y = 0; y < canvas.height; y += gridSize) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-            }
-
-            // Draw Collectibles
-            collectibles.forEach(col => {
-                ctx.save();
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = col.color;
-                ctx.fillStyle = col.color;
-                ctx.beginPath();
-                ctx.arc(col.x, col.y, col.radius, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
             });
 
-            // Draw Enemies
+            cores.forEach((c, index) => {
+                const dist = Math.hypot(player.x - c.x, player.y - c.y);
+                if (dist < player.radius + c.radius) {
+                    score += 100;
+                    scoreDisplay.textContent = score;
+                    playSound('collect');
+                    addParticles(c.x, c.y, '#06b6d4');
+                    cores.splice(index, 1);
+                    spawnCore();
+                }
+            });
+
+            particles.forEach(pt => {
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.alpha -= pt.decay;
+            });
+            particles = particles.filter(pt => pt.alpha > 0);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            ctx.strokeStyle = 'rgba(15, 23, 42, 0.8)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < width; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
+            }
+            for (let j = 0; j < height; j += 30) {
+                ctx.beginPath();
+                ctx.moveTo(0, j);
+                ctx.lineTo(width, j);
+                ctx.stroke();
+            }
+
+            // Draw Energy Cores
+            cores.forEach(c => {
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#06b6d4';
+                ctx.fillStyle = '#22d3ee';
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw Rogue Enemies
             enemies.forEach(en => {
-                ctx.save();
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = en.color;
-                ctx.fillStyle = en.color;
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = '#ec4899';
+                ctx.fillStyle = '#f43f5e';
                 ctx.beginPath();
                 ctx.arc(en.x, en.y, en.radius, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.restore();
             });
 
-            // Draw Player
-            ctx.save();
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = hitCooldown > 0 && Math.floor(Date.now() / 100) % 2 === 0 ? '#ffffff' : player.color;
-            ctx.fillStyle = hitCooldown > 0 && Math.floor(Date.now() / 100) % 2 === 0 ? '#ffffff' : player.color;
+            // Draw Particles
+            particles.forEach(pt => {
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = pt.color;
+                ctx.fillStyle = pt.color;
+                ctx.globalAlpha = pt.alpha;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Draw Player Drone
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = '#06b6d4';
+            ctx.fillStyle = (hitCooldown > 0 && Math.floor(hitCooldown / 5) % 2 === 0) ? '#ffffff' : '#06b6d4';
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.restore();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius / 2.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
         }
 
-        function loop() {
+        function gameLoop() {
             update();
-            draw();
-            if (!isGameOver) requestAnimationFrame(loop);
+            render();
+            requestAnimationFrame(gameLoop);
         }
 
-        function triggerGameOver() {
-            isGameOver = true;
-            finalScore.innerText = `Your Score: ${score}`;
-            gameOverScreen.style.display = 'flex';
+        function startGame() {
+            initAudio();
+            gameState = 'PLAYING';
+            menuOverlay.classList.add('hidden');
+            initGame();
         }
 
-        restartBtn.addEventListener('click', () => {
-            score = 0;
-            lives = 10;
-            isGameOver = false;
-            enemies = [];
-            collectibles = [];
-            scoreDisplay.innerText = `Score: ${score}`;
-            livesDisplay.innerText = `Shields: ${lives}/10`;
-            gameOverScreen.style.display = 'none';
-            player.x = canvas.width / 2;
-            player.y = canvas.height / 2;
-            for(let i=0; i<3; i++) spawnEnemy();
-            for(let i=0; i<3; i++) spawnCollectible();
-            loop();
-        });
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            playSound('gameover');
 
-        loop();
+            menuTitle.textContent = "MISSION FAILED";
+            menuSubtitle.textContent = `You scored ${score} points after 10 hits. Tap below to retry!`;
+            startBtn.textContent = "Try Again";
+            menuOverlay.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
